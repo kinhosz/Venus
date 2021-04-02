@@ -25,4 +25,9 @@ class callistoClient:
 
 
 if __name__ == "__main__":
-    obj = callistoClient()
+
+    lista = ["maria",
+             "joao",
+             str(34)]
+    msg = '\n'.join(lista)
+    print(msg[:-1])
