@@ -41,14 +41,24 @@ class vClient(vBase):
         super().__init__()
         self.__serverKeys = {}
         self.__serverAuth = {}
-        print("criei")
+        print("vClient pronto")
     # funcoes privadas
+
+    def __sendCrypto(self, addr, msg, encryptKey=-1, decryptKey=-1):
+        #encryptedMsg = self._encrypt(msg, encryptKey)
+        channel = callistoClient(addr)
+       # channel.send(encryptedMsg)
+        channel.send(msg.encode("utf-8"))
+        receivedMsg = channel.getMessage()
+        #decryptedMsg = self._decrypt(msg, decryptKey)
+        decryptedMsg = receivedMsg.decode("utf-8")
+        return decryptedMsg
 
     def __getPublicKey(self, addr):
         encryptKey = self._CAKey
         decryptKey = self._CAKey
         msg = str(addr)
-        response = self._sendCrypto(addr, msg, encryptKey, decryptKey)
+        response = self.__sendCrypto(self._CAaddr, msg, encryptKey, decryptKey)
         publicServerKey = response.split('\n')[1]
         hostname = response.split('\n')[0]
         if hostname != addr:
@@ -94,9 +104,45 @@ class vClient(vBase):
 
     def vote(self, addr, sessionID, option):
         self.__assertConnection(addr)
+        authKey = self.__serverAuth[addr]
+
+        details = [
+            authKey,
+            "002",
+            sessionID,
+            option
+        ]
+        msg = '\n'.join(details)
+        response = self.__sendCrypto(addr, msg)
+        if reponse.split('\n')[1] == 0:
+            print(response.split('\n')[0] + " Sucessuful")
+        else:
+            print(response.split('\n')[0] + response.split('\n')[2])
 
     def checkResult(self, addr, sessionID):
         self.__assertConnection(addr)
+        authKey = self.__serverAuth[addr]
+
+        details = [
+            authKey,
+            "003",
+            sessionID
+        ]
+        msg = '\n'.join(details)
+
+        response = self.__sendCrypto(addr, msg)
+
+        L = []
+        data = response.split('\n')
+
+        for i in range(2, len(data)):
+            L.append(data[i])
+
+        if response.split('\n')[1] == "-1":
+            print(response.split('\n')[0] + " erro ao checar resultados")
+        else:
+            print(response.split('\n')[0] + " finalizado.")
+            return L
 
     def sayHi(self):
         print("hi")
