@@ -1,6 +1,7 @@
 import rsa
 from socket import *
 from threading import Thread
+import time
 
 
 class callistoServer:
@@ -26,16 +27,18 @@ class callistoServer:
         while packet == "":
             packet = con.recv(1024)
 
-        msg = rsa.decrypt(packet, self.__privateKey)
-        print(msg[0])
+        decrypt = rsa.PublicKey(
+            6910515391195348810132447251178670692951059336858946790607328386601007565781193579517590880812544951865837954471821768623160793092926852029297019945858141, 65537)
+        packet = rsa.decrypt(packet, decrypt)
+        msg = packet.decode("utf-8")
+        print(msg)
 
         con.close()
 
 
 def main():
 
-    (pubKey, privateKey) = rsa.newkeys(2048)
-    print(pubKey)
+    (pubKey, privateKey) = rsa.newkeys(512)
 
     channel = callistoServer(privateKey)
     channel.start()

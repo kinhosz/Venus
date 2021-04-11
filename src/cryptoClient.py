@@ -1,6 +1,9 @@
 import rsa
 from socket import *
 from threading import Thread
+import time
+import json
+import sys
 
 
 class callistoClient:
@@ -27,15 +30,47 @@ class callistoClient:
         self.__clientSocket.send(msg)
 
 
+def encrypt(data, pubKey):
+    response = bytes(0)
+    block = rsa.common.byte_size(pubKey.n) - 11
+    end = len(data)
+    initial = 0
+    while initial < end:
+        finish = min(initial+block, end)
+        response = response + rsa.encrypt(data[initial:finish], pubKey)
+        initial = initial + block
+    return response
+
+
+def decrypt(data, privKey):
+    response = bytes(0)
+    block = rsa.common.byte_size(privKey.n)
+    end = len(data)
+    initial = 0
+    while initial < end:
+        finish = min(initial+block, end)
+        response = response + rsa.decrypt(data[initial:finish], privKey)
+        initial = initial + block
+    return response
+
+
 def main():
 
-    (pubKey, privateKey) = rsa.newkeys(2048)
-    print(pubKey)
-    channel = callistoClient()
-    msg = str(pubKey.n) + '\n' + str(pubKey.e)
-    serverKey = rsa.PublicKey(17356696456326609787384458440264025691616143408621427405202879611221885123331580507634582285730172239855232170363195210578406972512452849674574809746546764158940136159884061481971247535275562821362984935452390519619213906265654199642147281036369385214646094355216119914908680962212744288239882578467886658416868551863058095807134889904437987579928321520414420942227387538869323254842039382009692723055089299080054098781220351964149416473379681195857414168732271350620219938605744443589474975619008283111308387473754995154617895847724310376804179409171850036400939429021173719363175742960909666215218788964798127604451, 65537)
-    packet = rsa.encrypt(msg.encode("utf-8"), serverKey)
-    channel.send(packet)
+    (pubKey, privKey) = rsa.newkeys(1024)  # 245
+    packet = {}
+    packet["code"] = "008"
+    packet["username"] = "kinho"
+    packet["password"] = "1234"
+    packet["pubKey"] = [pubKey.n, pubKey.e]
+    message = json.dumps(packet)
+    print(message)
+    data = message.encode("utf-8")
+    data = encrypt(data, pubKey)
+    # print(data)
+    print("-------------")
+    data = decrypt(data, privKey)
+    message = data.decode("utf-8")
+    print(message)
 
 
 if __name__ == "__main__":
