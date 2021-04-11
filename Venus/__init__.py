@@ -14,5 +14,5 @@ from Venus.Crypto.crypto import encrypt
 from Venus.server.Server import vServer
 from Venus.TCP.callisto import *
 
-CAKEY = "Venus/CA/CAKey.txt"
-CA_DATABASE = "Venus/CA/database.txt"
+CAKEY = "Venus/CA/data/CAKey.txt"
+CA_DATABASE = "Venus/CA/data/database.txt"
