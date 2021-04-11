@@ -1,11 +1,3 @@
-#from vBase import *
-from socket import *
-from threading import Thread
-import rsa
-import json
-from TCP.web import callistoServer
-# from CAKeys import *
-
 # Requisição da chave pública de algum nó do cliente para o CA:
 # Resposta do CA para requisições de chave pública:
 # Requisição da Autenticação do cliente para o servidor:
@@ -13,35 +5,10 @@ from TCP.web import callistoServer
 # Requisição da operação do cliente
 # Resposta da operação do cliente
 
-
-def encrypt(data, pubKey):
-    response = bytes(0)
-    block = rsa.common.byte_size(pubKey.n) - 11
-    end = len(data)
-    initial = 0
-    while initial < end:
-        finish = min(initial+block, end)
-        response = response + rsa.encrypt(data[initial:finish], pubKey)
-        initial = initial + block
-    return response
-
-
-def decrypt(data, privKey):
-    response = bytes(0)
-    block = rsa.common.byte_size(privKey.n)
-    end = len(data)
-    initial = 0
-    while initial < end:
-        finish = min(initial+block, end)
-        response = response + rsa.decrypt(data[initial:finish], privKey)
-        initial = initial + block
-    return response
-
-
 class vCA():
 
     def __init__(self):
-        f = open("CA/CAKey.txt", "r")
+        f = open(CAKEY, "r")
         keys = json.loads(f.read())
         f.close()
         self.__publicKey = rsa.PublicKey(
@@ -71,13 +38,13 @@ class vCA():
         addr = msg["addr"]
         n = msg["n"]
         e = msg["e"]
-        f = open("CA/database.txt", "r")
+        f = open(CA_DATABASE, "r")
         database = json.loads(f.read())
         f.close()
         database[addr] = {}
         database[addr]["n"] = n
         database[addr]["e"] = e
-        f = open("database.txt", "w")
+        f = open(CA_DATABASE, "w")
         f.write(json.dumps(database))
         f.close()
         print("registrado")

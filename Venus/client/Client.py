@@ -1,10 +1,3 @@
-#from vBase import *
-from socket import *
-from threading import Thread
-import rsa
-import time
-from TCP.web import callistoClient
-
 # Requisição da chave pública de algum nó do cliente para o CA:
 # Resposta do CA para requisições de chave pública:
 # Requisição da Autenticação do cliente para o servidor:
@@ -26,15 +19,6 @@ class vClient():
         self.__privateKey = privKey
         print("vClient pronto")
     # funcoes privadas
-
-    def __encrypt(self, msg, encryptKey):
-
-        encryptedMsg = rsa.encrypt(msg.encode("utf-8"), encryptKey)
-        return encryptedMsg
-
-    def __decrypt(self, msg, decryptKey):
-        decryptedMsg = (rsa.decrypt(msg, decryptKey)).decode("utf-8")
-        return decryptedMsg
 
     def __sendCrypto(self, addr, msg, encryptKey=-1, decryptKey=-1):
         #encryptedMsg = self._encrypt(msg, encryptKey)
