@@ -5,7 +5,7 @@ import socket
 def main():
 
     CA = Venus.vCA()
-    CA.listen(100)
+    CA.listen(60)
 
 
 if __name__ == "__main__":

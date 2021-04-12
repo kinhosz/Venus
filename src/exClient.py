@@ -5,11 +5,7 @@ from socket import *
 def main():
 
     client = Venus.vClient()
-    pubKey = client.getServerPK((gethostbyname("localHost"), 12000))
-    if pubKey == None:
-        print("None")
-    else:
-        print(pubKey)
+    client.vote((gethostbyname("localhost"), 12000), 3, 3)
 
 
 if __name__ == "__main__":

@@ -25,36 +25,35 @@ class vServer():
 
     # funcoes privadas
 
-    def __handleResponse(self, packet, addr):
-        msg = packet.decode("utf-8")
-        authKey = msg.split('\n')[0]
-        data = msg.split('\n')[1:]
+    def __getPK(self, R):
 
-        if data[0] == "007":
-            return self.__handleConnect(data[1])
+        if R not in self.__clientAuth.keys():
+            return None
 
-        if authKey not in self.__clientAuth.keys():
-            return "NULL"
+        return self.__clientAuth[R]
 
-        if data[0] == "001":
-            size = data[4]
-            options = []
-            for i in range(5, 5+size):
-                options.append(data[i])
+    def __handleResponse(self, data):
+        data = decrypt(data, self.__privateKey)
+        pkt = json.loads(data.decode("utf-8"))
 
-            return self.__handleCreateSession(endingMode=data[1], limit=data[2], description=data[3], options=options)
-        elif data[0] == "002":
-            return self.__handleVote(data[1], data[2])
-        elif data[0] == "003":
-            return self.__handleCheckResult(data[1])
+        if pkt["code"] == "007":
+            pkt = self.__handleConnect(pkt)
+            pubKey = self.__getPK(pkt["auth"])
 
-    def __handleConnect(self, clientKey):
+        data = json.dumps(pkt).encode("utf-8")
+        data = encrypt(data, pubKey)
+        return data
 
-        authKey = random.randint(0, 1000000000)
+    def __handleConnect(self, pkt):
 
-        self.__clientAuth[authKey] = clientKey
+        authKey = random.randint(0, 1000000000000000000)
+        pubKey = rsa.PublicKey(pkt["n"], pkt["e"])
+        self.__clientAuth[authKey] = pubKey
+        pkt = {}
+        pkt["code"] = "907"
+        pkt["auth"] = authKey
 
-        return authKey
+        return pkt
 
     def __handleCreateSession(self, description, options, endingMode, limit):
         sessionID = random.randint(0, 1000000)
@@ -139,6 +138,8 @@ class vServer():
             pkt = json.loads(data)
             print(pkt["code"])
 
-    def listen(self):
-        channel = callistoServer(self.__handleResponse)
+    def listen(self, lifetime=60):
+        print("server ativo")
+        channel = callistoServer(
+            self.__handleResponse, self.__myAddr, lifetime=lifetime)
         channel.start()

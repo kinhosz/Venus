@@ -26,40 +26,35 @@ class vClient():
         print("vClient pronto")
     # funcoes privadas
 
-    def __sendCrypto(self, addr, msg, encryptKey=-1, decryptKey=-1):
-        # encryptedMsg = self._encrypt(msg, encryptKey)
-        channel = callistoClient(addr)
-       # channel.send(encryptedMsg)
-        channel.send(msg.encode("utf-8"))
-        receivedMsg = channel.getMessage()
-        # decryptedMsg = self._decrypt(msg, decryptKey)
-        decryptedMsg = receivedMsg.decode("utf-8")
-        return decryptedMsg
-
-    def __getPublicKey(self, addr):
-        encryptKey = self._CAKey
-        decryptKey = self._CAKey
-        msg = str(addr)
-        response = self.__sendCrypto(self._CAaddr, msg, encryptKey, decryptKey)
-        publicServerKey = response.split('\n')[1]
-        hostname = response.split('\n')[0]
-        if hostname != addr:
-            return __getPublicKey(addr)
-        return publicServerKey
-
     def __connect(self, addr):
-        msg = "007" + '\n' + str(self.__publicKey)
-        encryptKey = self.__serverKeys[addr]
-        decryptKey = self.__privateKey
-        response = self.__sendCrypto(addr, msg, encryptKey, decryptKey)
-        return response
+        pubKey = self.__getServerPK(addr)
+        user = str(addr[0]) + "::" + str(addr[1])
+        pkt = {}
+        pkt["code"] = "007"
+        pkt["n"] = self.__publicKey.n
+        pkt["e"] = self.__publicKey.e
+        data = json.dumps(pkt).encode("utf-8")
+        data = encrypt(data, pubKey)
+        channel = callistoClient(addr)
+        data = channel.send(data)
+
+        if data == b'':
+            print("no response")
+            return None
+
+        data = decrypt(data, self.__privateKey)
+        pkt = json.loads(data.decode("utf-8"))
+        if pkt["code"] != "907":
+            print("Failed")
+            return None
+
+        R = pkt["auth"]
+        self.__serverAuth[user] = R
 
     def __assertConnection(self, addr):
-        if addr not in self.__serverKeys.keys():
-            publicKey = self.__getPublicKey(addr)
-            self.__serverKeys[addr] = publicKey
-            authKey = self.__connect(addr)
-            self.__serverAuth[addr] = authKey
+        user = str(addr[0]) + "::" + str(addr[1])
+        if user not in self.__serverAuth.keys():
+            self.__connect(addr)
 
     def createSession(self, addr, description, options, endingMode="votes", limit=5):
         self.__assertConnection(addr)
@@ -86,7 +81,7 @@ class vClient():
 
     def vote(self, addr, sessionID, option):
         self.__assertConnection(addr)
-        authKey = self.__serverAuth[addr]
+        """authKey = self.__serverAuth[addr]
 
         details = [
             authKey,
@@ -99,7 +94,7 @@ class vClient():
         if reponse.split('\n')[1] == 0:
             print(response.split('\n')[0] + " Sucessuful")
         else:
-            print(response.split('\n')[0] + response.split('\n')[2])
+            print(response.split('\n')[0] + response.split('\n')[2])"""
 
     def checkResult(self, addr, sessionID):
         self.__assertConnection(addr)
@@ -126,8 +121,7 @@ class vClient():
             print(response.split('\n')[0] + " finalizado.")
             return L
 
-    def getServerPK(self, addr):
-
+    def __getServerPK(self, addr):
         user = str(addr[0]) + "::" + str(addr[1])
         if user in self.__serverKeys.keys():
             return self.__serverKeys[user]
@@ -157,4 +151,5 @@ class vClient():
             return None
 
     def sayHi(self):
+
         print("hi")
