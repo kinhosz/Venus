@@ -3,6 +3,7 @@ import random
 import json
 import rsa
 import datetime
+import socket
 # PACKAGE CA
 from Venus.Crypto.crypto import *
 from Venus.TCP.callisto import *
@@ -16,8 +17,8 @@ class vServer():
         self.__sessions = {}
         self.__CAKey = rsa.PublicKey(
             109250418308419214252988158234054746310229615585736037507546066195584397168016272841796091176995733151598575577605605009612419783247025738841944363988793837123448345186370466753697839705410912543140229146561184474662676112358669857389955427895692147640574974483494340547706839941457181394779357981284678316851, 65537)
-        self.__CAaddr = ("localHost", 1234)
-        self.__myAddr = ("localHost", 12000)
+        self.__CAaddr = (gethostbyname("localHost"), 1234)
+        self.__myAddr = (gethostbyname("localHost"), 12000)
         (pubKey, privKey) = rsa.newkeys(1024)
         self.__publicKey = pubKey
         self.__privateKey = privKey

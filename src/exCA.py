@@ -1,10 +1,11 @@
 import Venus
+import socket
 
 
 def main():
 
     CA = Venus.vCA()
-    CA.listen(30)
+    CA.listen(100)
 
 
 if __name__ == "__main__":

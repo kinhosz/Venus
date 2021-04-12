@@ -17,7 +17,7 @@ class vClient():
         # super().__init__()
         self.__CAKey = rsa.PublicKey(
             109250418308419214252988158234054746310229615585736037507546066195584397168016272841796091176995733151598575577605605009612419783247025738841944363988793837123448345186370466753697839705410912543140229146561184474662676112358669857389955427895692147640574974483494340547706839941457181394779357981284678316851, 65537)
-        self._CAaddr = ("localHost", 1234)
+        self.__CAaddr = (gethostbyname("localHost"), 1234)
         self.__serverKeys = {}
         self.__serverAuth = {}
         (pubKey, privKey) = rsa.newkeys(1024)
@@ -27,12 +27,12 @@ class vClient():
     # funcoes privadas
 
     def __sendCrypto(self, addr, msg, encryptKey=-1, decryptKey=-1):
-        #encryptedMsg = self._encrypt(msg, encryptKey)
+        # encryptedMsg = self._encrypt(msg, encryptKey)
         channel = callistoClient(addr)
        # channel.send(encryptedMsg)
         channel.send(msg.encode("utf-8"))
         receivedMsg = channel.getMessage()
-        #decryptedMsg = self._decrypt(msg, decryptKey)
+        # decryptedMsg = self._decrypt(msg, decryptKey)
         decryptedMsg = receivedMsg.decode("utf-8")
         return decryptedMsg
 
@@ -125,6 +125,36 @@ class vClient():
         else:
             print(response.split('\n')[0] + " finalizado.")
             return L
+
+    def getServerPK(self, addr):
+
+        user = str(addr[0]) + "::" + str(addr[1])
+        if user in self.__serverKeys.keys():
+            return self.__serverKeys[user]
+
+        channel = callistoClient(self.__CAaddr)
+        pkt = {}
+        pkt["code"] = "001"
+        pkt["addr"] = addr
+        pkt["n"] = self.__publicKey.n
+        pkt["e"] = self.__publicKey.e
+        data = json.dumps(pkt).encode("utf-8")
+        data = encrypt(data, self.__CAKey)
+        data = channel.send(data)
+
+        if data == b'':
+            print("no response")
+            return None
+
+        data = decrypt(data, self.__privateKey).decode("utf-8")
+        pkt = json.loads(data)
+
+        if pkt["code"] == "900" and pkt["addr"][0] == addr[0] and pkt["addr"][1] == addr[1]:
+            pubKey = rsa.PublicKey(pkt["n"], pkt["e"])
+            self.__serverKeys[user] = pubKey
+            return pubKey
+        else:
+            return None
 
     def sayHi(self):
         print("hi")

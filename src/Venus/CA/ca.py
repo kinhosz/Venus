@@ -4,8 +4,6 @@ import random
 import json
 import rsa
 import datetime
-from socket import *
-from threading import Thread
 # PACKAGE CA
 from Venus.Crypto.crypto import *
 from Venus.TCP.callisto import *
@@ -32,7 +30,7 @@ class vCA():
         f = open(self.__CA_DATABASE, "r")
         self.__database = json.loads(f.read())
         f.close()
-        self.__CAaddr = ("localHost", 1234)
+        self.__CAaddr = (gethostbyname("localHost"), 1234)
         print("CA online")
 
     def __register(self, addr, n, e):
@@ -42,13 +40,13 @@ class vCA():
         self.__database[user]["n"] = n
         self.__database[user]["e"] = e
         pkt = {}
-        pkt["code"] = "777"
+        pkt["code"] = "900"
         return pkt
 
     def __getKey(self, addr):
         user = str(addr[0]) + "::" + str(addr[1])
 
-        if user not in self.__database:
+        if user not in self.__database.keys():
             return None
 
         pubKey = rsa.PublicKey(
@@ -60,13 +58,32 @@ class vCA():
         packet = decrypt(packet, self.__privateKey)
         msg = json.loads(packet.decode("utf-8"))
 
-        if(msg["code"] == "000"):
+        if msg["code"] == "000":
             addr = msg["addr"]
             msg = self.__register(addr, msg["n"], msg["e"])
             pubKey = self.__getKey(addr)
-            pkt = json.dumps(msg).encode("utf-8")
-            pkt = encrypt(pkt, pubKey)
-            return pkt
+
+        elif msg["code"] == "001":
+            addr = msg["addr"]
+            pubKey = rsa.PublicKey(msg["n"], msg["e"])
+            ret = self.__getKey(addr)
+
+            if ret == None:
+                msg = {}
+                msg["code"] = "901"
+            else:
+                msg = {}
+                msg["code"] = "900"
+                msg["addr"] = addr
+                msg["n"] = ret.n
+                msg["e"] = ret.e
+        else:
+            msg = {}
+            msg["code"] = "901"
+
+        pkt = json.dumps(msg).encode("utf-8")
+        pkt = encrypt(pkt, pubKey)
+        return pkt
 
     def __close(self):
         f = open(self.__CA_DATABASE, "w")
