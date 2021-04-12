@@ -1,3 +1,7 @@
+# DEPENDENCIES
+import rsa
+
+
 def encrypt(data, pubKey):
     response = bytes(0)
     block = rsa.common.byte_size(pubKey.n) - 11

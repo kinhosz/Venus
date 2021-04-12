@@ -1,3 +1,13 @@
+# DEPENDENCIES
+import random
+import json
+import rsa
+import datetime
+# PACKAGE CA
+from Venus.Crypto.crypto import *
+from Venus.TCP.callisto import *
+
+
 class vServer():
 
     def __init__(self):
@@ -120,9 +130,13 @@ class vServer():
         pkt["n"] = self.__publicKey.n
         pkt["e"] = self.__publicKey.e
         data = encrypt(json.dumps(pkt).encode("utf-8"), self.__CAKey)
-        channel.send(data)
-        channel.close()
-        print("registrado")
+        data = channel.send(data)
+        if data == b'':
+            print("no response")
+        else:
+            data = decrypt(data, self.__privateKey).decode("utf-8")
+            pkt = json.loads(data)
+            print(pkt["code"])
 
     def listen(self):
         channel = callistoServer(self.__handleResponse)

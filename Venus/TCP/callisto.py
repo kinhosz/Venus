@@ -1,19 +1,35 @@
+# DEPENDENCIES
+import time
+from socket import *
+from threading import Thread
+
+
 class callistoServer:
 
-    def __init__(self, callback, addr=("localhost", 3300), capacity=100):
+    def __init__(self, callback, addr=("localhost", 3300), capacity=100, lifetime=10):
         self.__serverAddr = addr
         self.__capacity = capacity
         self.__callback = callback
+        self.__lifetime = lifetime
 
     def start(self):
         self.__serverSocket = socket(AF_INET, SOCK_STREAM)
         self.__serverSocket.bind(self.__serverAddr)
         self.__serverSocket.listen(self.__capacity)
+        self.__serverSocket.settimeout(self.__lifetime)
 
-        while True:
-            connectionSocket, addr = self.__serverSocket.accept()
-            t = Thread(target=self.__respond, args=(connectionSocket, addr,))
-            t.start()
+        alive = True
+        while alive:
+            try:
+                connectionSocket, addr = self.__serverSocket.accept()
+                print("connected with ", str(addr))
+                t = Thread(target=self.__respond,
+                           args=(connectionSocket, addr,))
+                t.start()
+            except:
+                alive = False
+
+        self.__serverSocket.close()
 
     def __respond(self, con, cli):
 
@@ -21,7 +37,8 @@ class callistoServer:
         while packet == "":
             packet = con.recv(1024)
 
-        self.__callback(cli)
+        data = self.__callback(packet)
+        con.send(data)
         con.close()
 
 
@@ -40,13 +57,21 @@ class callistoClient:
         return self.__response
 
     def __recvMessage(self, clientSocket):
-        message = clientSocket.recv(1024)
+
+        message = ""
+        while message == "":
+            try:
+                message = clientSocket.recv(1024)
+            except:
+                self.__response = b''
+                self.__msgReceived = True
+
         clientSocket.close()
         self.__response = message
         self.__msgReceived = True
 
     def send(self, msg):
         self.__clientSocket.send(msg)
-
-    def close(self):
-        self.__clientSocket.close()
+        while self.__msgReceived == False:
+            time.sleep(0.1)
+        return self.__response

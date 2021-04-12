@@ -1,3 +1,9 @@
+# DEPENDENCIES
+import json
+import rsa
+# PACKAGE CA
+from Venus.Crypto.crypto import *
+from Venus.TCP.callisto import *
 # Requisição da chave pública de algum nó do cliente para o CA:
 # Resposta do CA para requisições de chave pública:
 # Requisição da Autenticação do cliente para o servidor:
