@@ -96,7 +96,7 @@ class vHost():
     def __copyCA(self, path):
         path = path + "/CA"
         self.__mkdir(path)
-        self.__copyFile("Venus/CA/ca.py", path + "ca.py")
+        self.__copyFile("Venus/CA/ca.py", path + "/ca.py")
         path = path + "/data"
         self.__mkdir(path)
         pkt = {}
