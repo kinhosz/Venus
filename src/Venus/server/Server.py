@@ -19,6 +19,7 @@ from Venus.TCP.callisto import *
     701: invalid sessionID
     702: closed session
     703: session not closed
+    704: invalid vote
 
     received:
     007: connect (autenticacao)
@@ -45,9 +46,6 @@ class vServer():
     # funcoes privadas
 
     def __getPK(self, R):
-
-        if R not in self.__clientAuth.keys():
-            return None
 
         return self.__clientAuth[R]
 
@@ -77,13 +75,13 @@ class vServer():
 
             data = json.dumps(pkt).encode("utf-8")
             data = encrypt(data, pubKey)
-            return data
+
         except:
             pkt = {
                 "code": "999"
             }
             data = json.dumps(pkt).encode("utf-8")
-            return data
+        return data
 
     def __handleConnect(self, pkt):
 
@@ -153,13 +151,21 @@ class vServer():
             }
             return pkt
 
+        valid = False
         pos = 0
         for e in session["options"]:
             if e == option:
                 session["votes"][pos] = session["votes"][pos] + 1
                 session["totalVotes"] = session["totalVotes"] + 1
+                valid = True
                 break
             pos = pos + 1
+
+        if valid == False:
+            pkt = {
+                "code": "704"
+            }
+            return pkt
 
         self.__sessions[sessionID] = session
         pkt = {

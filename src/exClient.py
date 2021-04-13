@@ -16,7 +16,7 @@ def main():
     print(pkt)
     pkt = client.vote(addr, sessionID, "kinho")
     print(pkt)
-    pkt = client.vote(addr, sessionID, "ambrosio")
+    pkt = client.vote(addr, sessionID, "zilde")
     print(pkt)
     pkt = client.vote(addr, sessionID, "kinho")
     print(pkt)
@@ -26,6 +26,10 @@ def main():
     while pkt["code"] == "703":
         time.sleep(0.1)
         pkt = client.checkResult(addr, sessionID)
+    print(pkt)
+    pkt = client.vote(addr, sessionID, "kinho")
+    print(pkt)
+    pkt = client.checkResult(addr, sessionID)
     print(pkt)
 
 
