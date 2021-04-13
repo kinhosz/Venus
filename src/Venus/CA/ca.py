@@ -30,7 +30,7 @@ class vCA():
         f = open(self.__CA_DATABASE, "r")
         self.__database = json.loads(f.read())
         f.close()
-        self.__CAaddr = (gethostbyname("localHost"), 1234)
+        self.__CAaddr = (keys["addr"]["ip"], keys["addr"]["port"])
         print("CA online")
 
     def __register(self, addr, n, e):
