@@ -4,7 +4,7 @@ import Venus
 def main():
     server = Venus.vServer()
     server.register()
-    server.listen()
+    server.listen(60)
 
 
 if __name__ == "__main__":

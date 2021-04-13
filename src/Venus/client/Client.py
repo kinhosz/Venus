@@ -11,6 +11,12 @@ from Venus.TCP.callisto import *
 # Requisição da operação do cliente
 # Resposta da operação do cliente
 
+# code
+"""
+ return a packet from server
+ a timeout code is represented by 408 code
+"""
+
 
 class vClient():
     def __init__(self):
@@ -26,6 +32,14 @@ class vClient():
         print("vClient pronto")
     # funcoes privadas
 
+    def __isValid(self, pkt, code):
+
+        if pkt["code"] == code:
+            return pkt
+        else:
+            print("error: ", pkt["code"])
+            return None
+
     def __connect(self, addr):
         pubKey = self.__getServerPK(addr)
         user = str(addr[0]) + "::" + str(addr[1])
@@ -37,15 +51,14 @@ class vClient():
         data = encrypt(data, pubKey)
         channel = callistoClient(addr)
         data = channel.send(data)
-
         if data == b'':
             print("no response")
             return None
 
         data = decrypt(data, self.__privateKey)
         pkt = json.loads(data.decode("utf-8"))
-        if pkt["code"] != "907":
-            print("Failed")
+        pkt = self.__isValid(pkt, "907")
+        if pkt == None:
             return None
 
         R = pkt["auth"]
@@ -56,70 +69,87 @@ class vClient():
         if user not in self.__serverAuth.keys():
             self.__connect(addr)
 
-    def createSession(self, addr, description, options, endingMode="votes", limit=5):
+    def createSession(self, addr, description, options, endingMode=1, limit=5):
         self.__assertConnection(addr)
-        authKey = self.__serverAuth[addr]
+        authKey = self.__getServerAuth(addr)
 
-        details = [
-            authKey,
-            "001",
-            endingMode,
-            str(limit),
-            description
-        ]
-        msg = '\n'.join(details + options)
+        pkt = {
+            "auth": authKey,
+            "code": "001",
+            "endingMode": endingMode,
+            "limit": limit,
+            "description": description,
+            "options": options
+        }
 
-        encryptKey = self.__serverKeys[addr]
-        decryptKey = self.__privateKey
-        response = self.__sendCrypto(addr, msg, encryptKey, decryptKey)
-        if response == "-1":
-            print("An error occurred during the process")
-        else:
-            print("Sucessfully create session with ID " + response)
+        pubKey = self.__getServerPK(addr)
+        data = json.dumps(pkt).encode("utf-8")
+        data = encrypt(data, pubKey)
+        channel = callistoClient(addr)
+        data = channel.send(data)
 
-        return response
+        if data == b'':
+            pkt = {
+                "code": "408"
+            }
+            return pkt
+
+        data = decrypt(data, self.__privateKey)
+        pkt = json.loads(data.decode("utf-8"))
+        return pkt
 
     def vote(self, addr, sessionID, option):
         self.__assertConnection(addr)
-        """authKey = self.__serverAuth[addr]
+        auth = self.__getServerAuth(addr)
+        pkt = {
+            "auth": auth,
+            "code": "002",
+            "sessionID": sessionID,
+            "option": option
+        }
 
-        details = [
-            authKey,
-            "002",
-            sessionID,
-            option
-        ]
-        msg = '\n'.join(details)
-        response = self.__sendCrypto(addr, msg)
-        if reponse.split('\n')[1] == 0:
-            print(response.split('\n')[0] + " Sucessuful")
-        else:
-            print(response.split('\n')[0] + response.split('\n')[2])"""
+        pubKey = self.__getServerPK(addr)
+        data = json.dumps(pkt).encode("utf-8")
+        data = encrypt(data, pubKey)
+        channel = callistoClient(addr)
+        data = channel.send(data)
+        if data == b'':
+            pkt = {
+                "code": "408"
+            }
+            return pkt
+
+        data = decrypt(data, self.__privateKey)
+        pkt = json.loads(data.decode("utf-8"))
+        return pkt
 
     def checkResult(self, addr, sessionID):
         self.__assertConnection(addr)
-        authKey = self.__serverAuth[addr]
+        auth = self.__getServerAuth(addr)
+        pkt = {
+            "auth": auth,
+            "code": "003",
+            "sessionID": sessionID
+        }
 
-        details = [
-            authKey,
-            "003",
-            sessionID
-        ]
-        msg = '\n'.join(details)
+        pubKey = self.__getServerPK(addr)
+        data = json.dumps(pkt).encode("utf-8")
+        data = encrypt(data, pubKey)
+        channel = callistoClient(addr)
+        data = channel.send(data)
+        if data == b'':
+            pkt = {
+                "code": "408"
+            }
+            return pkt
 
-        response = self.__sendCrypto(addr, msg)
+        data = decrypt(data, self.__privateKey)
+        pkt = json.loads(data.decode("utf-8"))
+        return pkt
 
-        L = []
-        data = response.split('\n')
-
-        for i in range(2, len(data)):
-            L.append(data[i])
-
-        if response.split('\n')[1] == "-1":
-            print(response.split('\n')[0] + " erro ao checar resultados")
-        else:
-            print(response.split('\n')[0] + " finalizado.")
-            return L
+    def __getServerAuth(self, addr):
+        user = str(addr[0]) + "::" + str(addr[1])
+        return self.__serverAuth[user]
 
     def __getServerPK(self, addr):
         user = str(addr[0]) + "::" + str(addr[1])

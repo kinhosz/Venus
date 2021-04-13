@@ -8,6 +8,25 @@ import socket
 from Venus.Crypto.crypto import *
 from Venus.TCP.callisto import *
 
+# codes
+""""
+    response
+    999: invalid packet
+    907: conected
+    901: created session
+    902: registered vote
+    903: Checked results
+    701: invalid sessionID
+    702: closed session
+    703: session not closed
+
+    received:
+    007: connect (autenticacao)
+    001: create session
+    002: vote
+    003: checkResult
+"""
+
 
 class vServer():
 
@@ -33,16 +52,38 @@ class vServer():
         return self.__clientAuth[R]
 
     def __handleResponse(self, data):
-        data = decrypt(data, self.__privateKey)
-        pkt = json.loads(data.decode("utf-8"))
+        try:
+            data = decrypt(data, self.__privateKey)
+            pkt = json.loads(data.decode("utf-8"))
 
-        if pkt["code"] == "007":
-            pkt = self.__handleConnect(pkt)
-            pubKey = self.__getPK(pkt["auth"])
+            if pkt["code"] == "007":
+                pkt = self.__handleConnect(pkt)
+                pubKey = self.__getPK(pkt["auth"])
+            elif pkt["code"] == "001":
+                pubKey = self.__getPK(pkt["auth"])
+                pkt = self.__handleCreateSession(pkt)
+            elif pkt["code"] == "002":
+                pubKey = self.__getPK(pkt["auth"])
+                pkt = self.__handleVote(pkt)
+            elif pkt["code"] == "003":
+                pubKey = self.__getPK(pkt["auth"])
+                pkt = self.__handleCheckResult(pkt)
+            else:
+                pkt = {
+                    "code": "999"
+                }
+                data = json.dumps(pkt).encode("utf-8")
+                return data
 
-        data = json.dumps(pkt).encode("utf-8")
-        data = encrypt(data, pubKey)
-        return data
+            data = json.dumps(pkt).encode("utf-8")
+            data = encrypt(data, pubKey)
+            return data
+        except:
+            pkt = {
+                "code": "999"
+            }
+            data = json.dumps(pkt).encode("utf-8")
+            return data
 
     def __handleConnect(self, pkt):
 
@@ -55,38 +96,62 @@ class vServer():
 
         return pkt
 
-    def __handleCreateSession(self, description, options, endingMode, limit):
-        sessionID = random.randint(0, 1000000)
+    def __handleCreateSession(self, pkt):
+        sessionID = random.randint(0, 1000000000000000)
+
+        if pkt["endingMode"] != 1 and pkt["endingMode"] != 0:
+            pkt = {
+                "code": "900"
+            }
+            return pkt
+
         session = {}
-        session["description"] = description
-        session["options"] = options
+        session["description"] = pkt["description"]
+        session["options"] = pkt["options"]
         session["id"] = sessionID
-        session["endingMode"] = endingMode
-        session["limit"] = limit
+        session["endingMode"] = pkt["endingMode"]
+        session["limit"] = pkt["limit"]
         session["totalVotes"] = 0
         session["start"] = datetime.datetime.now()
         votes = []
-        for i in range(len(options)):
+        for i in range(len(session["options"])):
             votes.append(0)
         session["votes"] = votes
         self.__sessions[sessionID] = session
 
-        return sessionID
+        pkt = {
+            "code": "901",
+            "sessionID": sessionID
+        }
 
-    def __handleVote(self, sessionID, option):
+        return pkt
+
+    def __handleVote(self, pkt):
+
+        sessionID = pkt["sessionID"]
+        option = pkt["option"]
 
         if sessionID not in self.__sessions.keys():
-            return "-1"
+            pkt = {
+                "code": "701"
+            }
+            return pkt
 
         session = self.__sessions[sessionID]
 
-        if session["endingMode"] == "votes" and session["totalVotes"] == session["limit"]:
-            return "-1"
+        if session["endingMode"] == 1 and session["totalVotes"] == session["limit"]:
+            pkt = {
+                "code": "702"
+            }
+            return pkt
 
-        duration = (datetime.datetime.now() - session["start"]).totalseconds()
+        duration = (datetime.datetime.now() - session["start"]).total_seconds()
 
-        if duration > session["limit"]:
-            return "-1"
+        if session["endingMode"] == 0 and duration > session["limit"]:
+            pkt = {
+                "code": "702"
+            }
+            return pkt
 
         pos = 0
         for e in session["options"]:
@@ -96,29 +161,55 @@ class vServer():
                 break
             pos = pos + 1
 
-        self.__sessions[sessionID] = sessions
+        self.__sessions[sessionID] = session
+        pkt = {
+            "code": "902"
+        }
+        return pkt
 
-    def __handleCheckResult(self, sessionID):
+    def __handleCheckResult(self, pkt):
+
+        sessionID = pkt["sessionID"]
 
         if sessionID not in self.__sessions.keys():
-            return "-1"
+            pkt = {
+                "code": "701"
+            }
+            return pkt
 
         session = self.__sessions[sessionID]
 
-        if session["endingMode"] == "votes" and session["totalVotes"] < session["limit"]:
-            return "-1"
+        if session["endingMode"] == 1 and session["totalVotes"] < session["limit"]:
+            pkt = {
+                "code": "703"
+            }
+            return pkt
 
-        duration = (datetime.datetime.now() - session["start"]).totalseconds()
+        duration = (datetime.datetime.now() - session["start"]).total_seconds()
 
-        if duration < session["limit"]:
-            return "-1"
+        if session["endingMode"] == 0 and duration < session["limit"]:
+            pkt = {
+                "code": "703"
+            }
+            return pkt
 
-        result = []
+        result = {}
 
         for i in range(0, len(session["options"])):
-            result.append((session["options"][i], session["votes"][i]))
+            result[session["options"][i]] = session["votes"][i]
 
-        return result
+        pkt = {
+            "code": "903",
+            "sessionID": session["id"],
+            "description": session["description"],
+            "result": result,
+            "totalVotes": session["totalVotes"],
+            "endingMode": session["endingMode"],
+            "limit": session["limit"],
+            "start": str(session["start"])
+        }
+
+        return pkt
 
     # funcoes publicas
 
@@ -136,7 +227,6 @@ class vServer():
         else:
             data = decrypt(data, self.__privateKey).decode("utf-8")
             pkt = json.loads(data)
-            print(pkt["code"])
 
     def listen(self, lifetime=60):
         print("server ativo")
