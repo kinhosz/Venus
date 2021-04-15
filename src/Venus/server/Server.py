@@ -236,7 +236,7 @@ class vServer():
             data = decrypt(data, self.__privateKey).decode("utf-8")
             pkt = json.loads(data)
 
-    def listen(self, lifetime=60):
+    def listen(self, lifetime=None):
         print("server ativo")
         channel = callistoServer(
             self.__handleResponse, self.__myAddr, lifetime=lifetime)

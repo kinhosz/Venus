@@ -91,7 +91,7 @@ class vCA():
         f.write(txt)
         f.close()
 
-    def listen(self, lifetime=60):
+    def listen(self, lifetime=None):
         channel = callistoServer(
             self.__handleResponse, self.__CAaddr, lifetime=lifetime)
         print("Servidor ouvindo em ", str(self.__CAaddr))
