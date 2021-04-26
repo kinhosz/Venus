@@ -4,6 +4,7 @@ from socket import *
 
 
 def check(pkt):
+    print("---------------------")
     if pkt["code"] == "408":
         print("Server Timeout")
     elif pkt["code"] == "701":
@@ -34,6 +35,7 @@ def check(pkt):
         print("Inicio da votação:", pkt["start"])
     else:
         print("Erro no pacote")
+    print("---------------------")
 
 
 def main():
